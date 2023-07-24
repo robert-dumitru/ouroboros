@@ -3,10 +3,10 @@ from .tensor import Tensor
 
 
 def gradient(func: callable, value: Tensor | np.ndarray) -> np.ndarray:
-    input = Tensor.as_tensor(value)
-    out: Tensor = func(input)
+    in_tensor = Tensor.as_tensor(value)
+    out: Tensor = func(in_tensor)
     out.backward()
-    return input.grad
+    return in_tensor.grad
 
 
 def hessian(func: callable, value: Tensor | np.ndarray) -> np.ndarray:

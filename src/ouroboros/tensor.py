@@ -1,12 +1,13 @@
-from __future__ import annotations
 import numpy as np
+from typing import Self
 
 _T = int | float | list | np.ndarray
 
 
 class Tensor:
-
-    def __init__(self, data: np.ndarray, _children: tuple[Tensor, ...] = (), _op: str = "") -> None:
+    def __init__(
+        self, data: np.ndarray, _children: tuple[Self, ...] = (), _op: str = ""
+    ) -> None:
         self.data: np.ndarray = data
         self.grad: np.ndarray = np.zeros(data.shape)
         # internal variables
@@ -18,14 +19,20 @@ class Tensor:
         return f"Tensor(data={self.data}, grad={self.grad})"
 
     @classmethod
-    def as_tensor(cls, data: Tensor | _T) -> Tensor:
+    def as_tensor(cls, data: Self | _T) -> Self:
         if isinstance(data, Tensor):
             return data
         elif isinstance(data, np.ndarray):
             return cls(data)
         elif isinstance(data, list):
             return cls(np.array(data))
-        elif isinstance(data, (int, float,)):
+        elif isinstance(
+            data,
+            (
+                int,
+                float,
+            ),
+        ):
             return cls(np.array(data))
         else:
             raise NotImplementedError
@@ -42,40 +49,63 @@ class Tensor:
     def shape(self) -> tuple[int, ...]:
         return self.data.shape
 
-    def __add__(self, other: Tensor | _T) -> Tensor:
+    def __add__(self, other: Self | _T) -> Self:
         other: Tensor = Tensor.as_tensor(other)
-        out: Tensor = Tensor(self.data + other.data, (self, other,), "+")
+        out: Tensor = Tensor(
+            self.data + other.data,
+            (
+                self,
+                other,
+            ),
+            "+",
+        )
 
         def _backward():
             self.grad += out.grad
             other.grad += other.grad
+
         out._backward = _backward
 
         return out
 
-    def __radd__(self, other: Tensor):
+    def __radd__(self, other: Self):
         return self + other
 
-    def __mul__(self, other: Tensor | _T) -> Tensor:
+    def __mul__(self, other: Self | _T) -> Self:
         other: Tensor = Tensor.as_tensor(other)
-        out: Tensor = Tensor(self.data * other.data, (self, other,), "*")
+        out: Tensor = Tensor(
+            self.data * other.data,
+            (
+                self,
+                other,
+            ),
+            "*",
+        )
 
         def _backward():
             self.grad += other.data * out.grad
             other.grad += self.data * out.grad
+
         out._backward = _backward
 
         return out
 
-    def __rmul__(self, other: Tensor):
+    def __rmul__(self, other: Self):
         return self * other
 
-    def __pow__(self, other: int | float) -> Tensor:
-        assert isinstance(other, (int, float,))
+    def __pow__(self, other: int | float) -> Self:
+        assert isinstance(
+            other,
+            (
+                int,
+                float,
+            ),
+        )
         out = Tensor(self.data**other, (self,), f"**{other}")
 
         def _backward():
-            self.grad += (other * self.data**(other-1)) * out.grad
+            self.grad += (other * self.data ** (other - 1)) * out.grad
+
         out._backward = _backward
 
         return out
@@ -83,21 +113,28 @@ class Tensor:
     def __neg__(self):
         return self * np.full(self.data.shape, -1)
 
-    def __sub__(self, other: Tensor | _T):
+    def __sub__(self, other: Self | _T):
         return self + (-other)
 
-    def __rsub__(self, other: Tensor):
+    def __rsub__(self, other: Self):
         return other + (-self)
 
-    def __truediv__(self, other: Tensor | _T):
+    def __truediv__(self, other: Self | _T):
         return self * other**-1
 
-    def __rtruediv__(self, other: Tensor):
+    def __rtruediv__(self, other: Self):
         return other * self**-1
 
-    def __matmul__(self, other: Tensor | _T):
+    def __matmul__(self, other: Self | _T):
         other: Tensor = Tensor.as_tensor(other)
-        out: Tensor = Tensor(self.data @ other.data, (self, other,), "@")
+        out: Tensor = Tensor(
+            self.data @ other.data,
+            (
+                self,
+                other,
+            ),
+            "@",
+        )
 
         def _backward():
             if len(out.grad.shape) == 0:
@@ -106,15 +143,15 @@ class Tensor:
             else:
                 self.grad += out.grad @ other.data.T
                 other.grad += self.data.T @ out.grad
+
         out._backward = _backward
 
         return out
 
-    def __rmatmul__(self, other: Tensor):
+    def __rmatmul__(self, other: Self):
         return (other.T @ self.T).T
 
     def backward(self):
-
         topo: list[Tensor] = []
         visited: set[Tensor, ...] = set()
 
@@ -124,6 +161,7 @@ class Tensor:
                 for c in v._prev:  # noqa: E
                     build_topo(c)
                 topo.append(v)
+
         build_topo(self)
 
         self.grad = np.ones(self.grad.shape)
